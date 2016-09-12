@@ -1,12 +1,12 @@
 /**
  * Created by Code1912 on 2016/7/27.
  */
-var common=require('./common');
-var errorHandler=require("./systemErrorHandler")
-var path=require("path");
-var fs=require("fs");
-url = require("url");
-var fileTypeExtensionMap= {
+let common=require('./common');
+let errorHandler=require("./systemErrorHandler");
+let path=require("path");
+let fs=require("fs");
+let url = require("url");
+let fileTypeExtensionMap= {
     '.ai': 'application/postscript',
     '.aif': 'audio/x-aiff',
     '.aifc': 'audio/x-aiff',
@@ -153,30 +153,33 @@ var fileTypeExtensionMap= {
     '.ttf': 'application/x-font-truetype',
     '.ico': 'image/x-icon'
 };
-
-var favicon="/favicon.ico";
-var isExistsIcon=null;
+let parseURL=require("url").parse;
+let favicon="/favicon.ico";
+let iconData=null;
 
  function handler(url, res) {
-     if(url.path===favicon)
+     if(url===favicon)
      {
          readFavicon(res);
          return true;
      }
-     fs.exists(url.path, function(exists) {
+     var urlObj=parseURL(url, true);
+     var lastFilePath=`${__dirname}/${urlObj.path}`;
+     fs.exists(lastFilePath, function(exists) {
          if (exists) {
-             response(res);
+             response(lastFilePath,res);
              return;
          }
-         errorHandler.error404(res);
+         errorHandler.error404(res,`can't find file${urlObj.path}`);
      });
 };
 
-function response(path,res) {
-    var fileType = fs.extname(url.pathname);
-    fs.readFile(path, function (err, data) {
+function response(filePath,res) {
+    let fileType = path.extname(filePath).toLocaleLowerCase();
+    //console.log(filePath);
+    fs.readFile(filePath,function (err, data) {
         if (err) {
-            errorHandler.error500(res);
+            errorHandler.error500(res,err);
             console.log(err)
             return;
         }
@@ -186,24 +189,22 @@ function response(path,res) {
 }
 
 function readFavicon(res){
-    if(isExistsIcon==null)
+    if(iconData)
     {
-        isExistsIcon =fs.exists(favicon)
-    }
-    if(!isExistsIcon)
-    {
-        res.writeHead(200, {'Content-Type': fileTypeExtensionMap["ico"]});
-        res.end();
+        res.writeHead(200, {'Content-Type': fileTypeExtensionMap[".ico"]});
+        res.end(iconData);
         return;
     }
-    fs.readFile(favicon, function (err, data) {
+    var filePath=  `${__dirname}/${favicon}`;
+    fs.readFile(filePath, function (err, data) {
         if (err)
         {
             res.writeHead(200, {'Content-Type': fileTypeExtensionMap[".ico"]});
             res.end();
-            console.log(err)
+            console.log(err);
             return;
         }
+        iconData=data;
         res.writeHead(200, {'Content-Type': fileTypeExtensionMap[".ico"]});
         res.end(data);
     });
